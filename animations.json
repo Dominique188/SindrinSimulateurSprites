@@ -1,0 +1,60 @@
+{
+  "prochain_id": 11,
+  "animations": [
+    {
+      "id": 1,
+      "nom": "lol",
+      "images": [],
+      "fps": 12
+    },
+    {
+      "id": 2,
+      "nom": "aaa",
+      "images": [],
+      "fps": 12
+    },
+    {
+      "id": 5,
+      "nom": "aa",
+      "images": [],
+      "fps": 50
+    },
+    {
+      "id": 6,
+      "nom": "aa",
+      "images": [],
+      "fps": 60
+    },
+    {
+      "id": 7,
+      "nom": "bla",
+      "images": [],
+      "fps": 12
+    },
+    {
+      "id": 8,
+      "nom": "Test avec images",
+      "images": [
+        "images/8/001.png",
+        "images/8/002.jpg",
+        "images/8/003.png",
+        "images/8/004.jpg",
+        "images/8/005.png",
+        "images/8/006.png"
+      ],
+      "fps": 12
+    },
+    {
+      "id": 9,
+      "nom": "Nouveau test",
+      "images": [
+        "images/9/001.jpeg",
+        "images/9/002.jpg",
+        "images/9/003.jpeg",
+        "images/9/004.jpg",
+        "images/9/005.png"
+      ],
+      "fps": 12
+    }
+  ]
+}
