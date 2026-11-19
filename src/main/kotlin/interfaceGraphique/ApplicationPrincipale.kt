@@ -3,6 +3,7 @@ package interfaceGraphique
 import donnees.ParametresDAO
 import modele.ParametresAffichage
 import service.AnimationService
+import service.ObjetService
 
 import javafx.application.Application
 import javafx.geometry.Insets
@@ -11,6 +12,8 @@ import javafx.scene.Scene
 import javafx.scene.control.Label
 import javafx.scene.control.ListView
 import javafx.scene.control.SplitPane
+import javafx.scene.control.Tab
+import javafx.scene.control.TabPane
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
@@ -21,13 +24,32 @@ class ApplicationPrincipale : Application() {
     override fun start(stage: Stage) {
         // Conteneur principal
         val contenu = BorderPane()
-        // Instance du service
-        val animation_service = AnimationService()
-        // Panneau des animations
-        val panneau_animations = PanneauAnimations(animation_service).creerPanneau()
 
-        val titre_animations = Label("Animations")
-        val liste_animations = ListView<String>()
+        // Services
+        val animation_service = AnimationService()
+        val objet_service = ObjetService()
+
+        // Panneaux
+        val panneau_objets = PanneauObjets(objet_service).creerPanneau()
+        val panneau_animations = PanneauAnimations(animation_service)
+            .creerPanneau()
+
+        // Onglets
+        val onglets = TabPane()
+
+        val onglet_objets = Tab("Objets", panneau_objets)
+        val onglet_animations = Tab("Animations", panneau_animations)
+        val onglet_images = Tab("Images", Label("Gestion des images"))
+
+        onglet_objets.isClosable = false
+        onglet_animations.isClosable = false
+        onglet_images.isClosable = false
+
+        onglets.tabs.addAll(
+            onglet_objets,
+            onglet_animations,
+            onglet_images
+        )
 
         // Zone de visualisation
         val zone_visualisation = StackPane()
@@ -50,7 +72,7 @@ class ApplicationPrincipale : Application() {
         conteneur_superieur.orientation = Orientation.HORIZONTAL
 
         conteneur_superieur.items.addAll(
-            panneau_animations,
+            onglets,
             zone_visualisation
         )
 

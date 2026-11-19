@@ -14,6 +14,7 @@ class AnimationService {
     private val animations = mutableListOf<Animation>()
 
     fun creerAnimation(
+        id_objet: Int,
         nom: String,
         fps: Int,
         images_selectionnees: List<String>
@@ -22,7 +23,8 @@ class AnimationService {
         val animation = Animation(
             id = prochain_id,
             nom = nom,
-            fps = fps
+            fps = fps,
+            id_objet = id_objet
         )
 
         val dossier_images = Path.of("images", animation.id.toString())

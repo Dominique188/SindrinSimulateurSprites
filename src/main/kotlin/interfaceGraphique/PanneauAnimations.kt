@@ -31,31 +31,55 @@ class PanneauAnimations(
     private val animation_service: AnimationService
 ) {
 
+    private var id_objet: Int? = null
+    private val liste_animations = ListView<Animation>()
+
+    fun afficherAnimations(id_objet: Int?) {
+        this.id_objet = id_objet
+
+        if (id_objet == null) {
+            liste_animations.items.clear()
+            return
+        }
+
+        liste_animations.items.setAll(
+            animation_service.obtenirAnimations().filter {
+                it.id_objet == id_objet
+            }
+        )
+    }
+
     fun creerPanneau(): VBox {
         val panneau = VBox(10.0)
         panneau.padding = Insets(10.0)
 
         val titre = Label("Animations")
 
-        val liste_animations = ListView<Animation>()
-        liste_animations.items.addAll(
-            animation_service.obtenirAnimations()
-        )
-
         liste_animations.setCellFactory {
             CelluleAnimation(animation_service)
         }
         // Grille pour les images de l'animation
         val grille_images = TilePane()
-
         grille_images.hgap = 10.0
         grille_images.vgap = 10.0
         grille_images.padding = Insets(10.0)
         grille_images.prefTileWidth = 100.0
         grille_images.prefTileHeight = 100.0
         grille_images.alignment = Pos.TOP_LEFT
+        // Image agrandie
+        val image_agrandie = ImageView()
+        image_agrandie.isPreserveRatio = true
+        image_agrandie.isSmooth = true
+        image_agrandie.isVisible = false
+        image_agrandie.isManaged = false
+        // Conteneur des images
+        val zone_image = StackPane()
+        zone_image.children.addAll(
+            grille_images,
+            image_agrandie
+        )
 
-        val defilement_images = ScrollPane(grille_images)
+        val defilement_images = ScrollPane(zone_image)
 
         defilement_images.isFitToWidth = true
         defilement_images.isFitToHeight = false
@@ -64,8 +88,8 @@ class PanneauAnimations(
 
         val panneau_images = VBox(10.0)
         panneau_images.children.addAll(
-            bouton_retour,
-            defilement_images
+            defilement_images,
+            bouton_retour
         )
 
         VBox.setVgrow(defilement_images, Priority.ALWAYS)
@@ -120,11 +144,14 @@ class PanneauAnimations(
         val bouton_ajouter = Button("Ajouter une animation")
 
         bouton_ajouter.setOnAction {
+            val objet_id = id_objet ?: return@setOnAction
+
             val resultat = dialogue.showAndWait()
 
             resultat.ifPresent { animation_saisie ->
 
                 val animation = animation_service.creerAnimation(
+                    objet_id,
                     animation_saisie.nom,
                     animation_saisie.fps,
                     images_selectionnees
@@ -135,7 +162,6 @@ class PanneauAnimations(
         }
 
         dialogue.setResultConverter { bouton ->
-
             if (bouton == ButtonType.OK) {
 
                 val nom = champ_nom.text.trim()
@@ -145,7 +171,8 @@ class PanneauAnimations(
                     Animation(
                         id = 0,
                         nom = nom,
-                        fps = fps
+                        fps = fps,
+                        id_objet = this.id_objet ?: return@setResultConverter null
                     )
                 } else {
                     null
@@ -183,8 +210,15 @@ class PanneauAnimations(
         bouton_retour.setOnAction {
             panneau_images.isVisible = false
             panneau_images.isManaged = false
+
             liste_animations.isVisible = true
             liste_animations.isManaged = true
+
+            grille_images.isVisible = true
+            grille_images.isManaged = true
+
+            image_agrandie.isVisible = false
+            image_agrandie.isManaged = false
         }
 
         liste_animations.setOnMouseClicked { e ->
@@ -202,14 +236,30 @@ class PanneauAnimations(
                     grille_images.children.clear()
 
                     animation.images.forEach { chemin ->
+
                         val image = Image(Path.of(chemin).toUri().toString())
 
                         val miniature = ImageView(image)
-
                         miniature.fitWidth = 120.0
                         miniature.fitHeight = 120.0
                         miniature.isPreserveRatio = true
                         miniature.isSmooth = true
+
+                        miniature.setOnMouseClicked { m ->
+
+                            if (m.clickCount == 2) {
+                                image_agrandie.image = image
+
+                                image_agrandie.fitWidth = zone_image.width * 0.9
+                                image_agrandie.fitHeight = zone_image.height * 0.9
+
+                                grille_images.isVisible = false
+                                grille_images.isManaged = false
+
+                                image_agrandie.isVisible = true
+                                image_agrandie.isManaged = true
+                            }
+                        }
 
                         grille_images.children.add(miniature)
                     }
