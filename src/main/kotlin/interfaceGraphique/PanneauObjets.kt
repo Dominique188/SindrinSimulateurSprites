@@ -14,7 +14,8 @@ import modele.Objet
 import service.ObjetService
 
 class PanneauObjets (
-    private val objet_service: ObjetService
+    private val objet_service: ObjetService,
+    private val action_selectionner_objet: (Objet?) -> Unit
 ) {
     private val dialogues = ObjetDialogue()
 
@@ -23,28 +24,32 @@ class PanneauObjets (
         panneau.padding = Insets(10.0)
 
         val titre = Label("Objets")
-
-        val liste_objets = ListView<Objet>()
-
         val bouton_ajouter = Button("Ajouter")
         val bouton_supprimer = Button("x")
         val bouton_creer = Button("Créer un objet")
+        val liste_objets = ListView<Objet>()
 
-        val boutons = HBox(10.0)
-        boutons.children.addAll(
+        // Conteneur du titre et du bouton
+        val entete = HBox(10.0)
+        entete.children.addAll(
             titre,
-            liste_objets,
             bouton_creer
         )
 
-        VBox.setVgrow(boutons, Priority.ALWAYS)
+        val conteneur = HBox(10.0)
+        conteneur.children.addAll(
+            entete,
+            liste_objets
+        )
+
+        VBox.setVgrow(liste_objets, Priority.ALWAYS)
 
         bouton_ajouter.setOnAction {
             val nom = dialogues.creerObjet()
 
             if (nom != null) {
-                objet_service.creerObjet(nom)
-                liste_objets.items.setAll(objet_service.obtenirObjets())
+                objet_service.creer(nom)
+                liste_objets.items.setAll(objet_service.obtenirTout())
             }
         }
 
@@ -56,7 +61,7 @@ class PanneauObjets (
 
                 if (confirmation) {
                     objet_service.supprimerObjet(objet)
-                    liste_objets.items.setAll(objet_service.obtenirObjets())
+                    liste_objets.items.setAll(objet_service.obtenirTout())
                 }
             }
         }
@@ -65,8 +70,8 @@ class PanneauObjets (
             val nom = dialogues.creerObjet()
 
             if (nom != null) {
-                objet_service.creerObjet(nom)
-                liste_objets.items.setAll(objet_service.obtenirObjets())
+                objet_service.creer(nom)
+                liste_objets.items.setAll(objet_service.obtenirTout())
             }
         }
 
@@ -85,14 +90,23 @@ class PanneauObjets (
         }
 
         panneau.children.addAll(
-            boutons,
+            conteneur,
             titre,
             liste_objets
         )
 
         VBox.setVgrow(liste_objets, Priority.ALWAYS)
 
-        liste_objets.items.setAll(objet_service.obtenirObjets())
+        liste_objets.items.setAll(objet_service.obtenirTout())
+
+        liste_objets.setCellFactory {
+            CelluleObjet(objet_service)
+        }
+
+        liste_objets.selectionModel.selectedItemProperty().addListener {
+            _, _, objet_selectionne ->
+            action_selectionner_objet(objet_selectionne)
+        }
 
         return panneau
     }

@@ -1,16 +1,18 @@
-package interfaceGraphique
-
 import donnees.ParametresDAO
 import modele.ParametresAffichage
 import service.AnimationService
 import service.ObjetService
+import interfaceGraphique.BarreSuperieure
+import interfaceGraphique.PanneauObjets
+import interfaceGraphique.PanneauAnimations
+import interfaceGraphique.PanneauImages
+import interfaceGraphique.simulation.ApplicationSimulation
 
 import javafx.application.Application
 import javafx.geometry.Insets
 import javafx.geometry.Orientation
 import javafx.scene.Scene
 import javafx.scene.control.Label
-import javafx.scene.control.ListView
 import javafx.scene.control.SplitPane
 import javafx.scene.control.Tab
 import javafx.scene.control.TabPane
@@ -19,40 +21,83 @@ import javafx.scene.layout.StackPane
 import javafx.scene.layout.VBox
 import javafx.stage.Stage
 
+import com.huskerdev.openglfx.libgdx.LibGDXCanvas
+
 class ApplicationPrincipale : Application() {
 
     override fun start(stage: Stage) {
+
         // Conteneur principal
         val contenu = BorderPane()
 
         // Services
         val animation_service = AnimationService()
         val objet_service = ObjetService()
+        val application_simulation = ApplicationSimulation()
+        val canvas_simulation = LibGDXCanvas(application_simulation)
 
-        // Panneaux
-        val panneau_objets = PanneauObjets(objet_service).creerPanneau()
-        val panneau_animations = PanneauAnimations(animation_service)
-            .creerPanneau()
+        val panneau_images_vue = PanneauImages(animation_service)
+        val panneau_images = panneau_images_vue.creerPanneau()
 
         // Onglets
         val onglets = TabPane()
+        val onglet_images = Tab("Images", panneau_images)
 
-        val onglet_objets = Tab("Objets", panneau_objets)
+        val panneau_animations_vue = PanneauAnimations(animation_service) { animation ->
+            onglet_images.isDisable = animation == null
+
+            panneau_images_vue.afficherImages(animation)
+
+            if (animation != null) {
+                application_simulation.definirDimensionsAnimation(
+                    animation.largeur,
+                    animation.hauteur
+                )
+            } else {
+                application_simulation.definirDimensionsAnimation(null, null)
+            }
+        }
+
+        val panneau_animations = panneau_animations_vue.creerPanneau()
+
+        val onglet_objets = Tab("Objets")
         val onglet_animations = Tab("Animations", panneau_animations)
-        val onglet_images = Tab("Images", Label("Gestion des images"))
 
+        // Désactiver les onglets tant qu'aucun objet n'est sélectionné
+        onglet_animations.isDisable = true
+        onglet_images.isDisable = true
+
+        // Empêcher la fermeture des onglets
         onglet_objets.isClosable = false
         onglet_animations.isClosable = false
         onglet_images.isClosable = false
 
+        // Panneau des objets avec gestion de la sélection (onglets disabled ou non)
+        val panneau_objets_vue = PanneauObjets(objet_service) { objet ->
+
+            onglet_animations.isDisable = objet == null
+            onglet_images.isDisable = true
+
+            panneau_animations_vue.afficherAnimations(objet?.id)
+        }
+
+        val panneau_objets = panneau_objets_vue.creerPanneau()
+
+        onglet_objets.content = panneau_objets
+
+        // Ajouter les onglets
         onglets.tabs.addAll(
             onglet_objets,
             onglet_animations,
             onglet_images
         )
 
+        contenu.center = onglets
+
         // Zone de visualisation
         val zone_visualisation = StackPane()
+
+        zone_visualisation.children.add(canvas_simulation)
 
         zone_visualisation.children.add(
             Label("Zone de visualisation")
@@ -123,6 +168,7 @@ class ApplicationPrincipale : Application() {
         // Barre supérieure
         val barre_superieure = BarreSuperieure(
             action_dimensions_defaut = {
+                application_simulation.definirZoom(1f)
                 conteneur_superieur.setDividerPositions(0.30)
                 disposition.setDividerPositions(0.75)
                 parametres = ParametresAffichage()

@@ -10,15 +10,24 @@ class ObjetService {
     private var prochain_id = 1
     private val objets = mutableListOf<Objet>()
 
-    private fun enregistrerObjet() {
+    fun renommerObjet(objet: Objet, nouveau_nom: String) {
+        val objet_existant = objets.find { it.id == objet.id }
+
+        if (objet_existant != null) {
+            objet_existant.nom = nouveau_nom
+            enregistrer()
+        }
+    }
+
+    private fun enregistrer() {
         objet_dao.enregistrer(prochain_id, objets)
     }
 
-    fun obtenirObjets(): List<Objet> {
+    fun obtenirTout(): List<Objet> {
         return objets
     }
 
-    fun creerObjet(nom: String): Objet {
+    fun creer(nom: String): Objet {
         val objet = Objet(
             id = prochain_id,
             nom = nom
@@ -28,14 +37,14 @@ class ObjetService {
 
         prochain_id++
 
-        enregistrerObjet()
+        enregistrer()
 
         return objet
     }
 
     fun supprimerObjet(objet: Objet) {
         objets.remove(objet)
-        enregistrerObjet()
+        enregistrer()
     }
 
     init {

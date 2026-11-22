@@ -18,17 +18,15 @@ import javafx.scene.image.ImageView
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.Priority
 import javafx.scene.layout.Region
-import javafx.scene.layout.StackPane
-import javafx.scene.layout.TilePane
 import javafx.stage.FileChooser
 
 import modele.Animation
 import service.AnimationService
-import java.io.File
-import java.nio.file.Path
+import kotlin.Int
 
 class PanneauAnimations(
-    private val animation_service: AnimationService
+    private val animation_service: AnimationService,
+    private val action_selectionner_animation: (Animation?) -> Unit
 ) {
 
     private var id_objet: Int? = null
@@ -39,8 +37,11 @@ class PanneauAnimations(
 
         if (id_objet == null) {
             liste_animations.items.clear()
+            action_selectionner_animation(null)
             return
         }
+
+        liste_animations.selectionModel.clearSelection()
 
         liste_animations.items.setAll(
             animation_service.obtenirAnimations().filter {
@@ -55,84 +56,61 @@ class PanneauAnimations(
 
         val titre = Label("Animations")
 
+        val bouton_ajouter = Button("Ajouter une animation")
+
+        // Liste des animations
         liste_animations.setCellFactory {
             CelluleAnimation(animation_service)
         }
-        // Grille pour les images de l'animation
-        val grille_images = TilePane()
-        grille_images.hgap = 10.0
-        grille_images.vgap = 10.0
-        grille_images.padding = Insets(10.0)
-        grille_images.prefTileWidth = 100.0
-        grille_images.prefTileHeight = 100.0
-        grille_images.alignment = Pos.TOP_LEFT
-        // Image agrandie
-        val image_agrandie = ImageView()
-        image_agrandie.isPreserveRatio = true
-        image_agrandie.isSmooth = true
-        image_agrandie.isVisible = false
-        image_agrandie.isManaged = false
-        // Conteneur des images
-        val zone_image = StackPane()
-        zone_image.children.addAll(
-            grille_images,
-            image_agrandie
+
+        // Entête
+        val entete = VBox(10.0)
+        entete.children.addAll(
+            bouton_ajouter,
+            titre
         )
 
-        val defilement_images = ScrollPane(zone_image)
+        // Défilement des animations
+        val defilement_animations = ScrollPane(liste_animations)
+        defilement_animations.isFitToWidth = true
+        defilement_animations.isFitToHeight = true
 
-        defilement_images.isFitToWidth = true
-        defilement_images.isFitToHeight = false
-
-        val bouton_retour = Button("Retour aux animations")
-
-        val panneau_images = VBox(10.0)
-        panneau_images.children.addAll(
-            defilement_images,
-            bouton_retour
+        // Conteneur
+        val conteneur = HBox(10.0)
+        conteneur.children.addAll(
+            entete,
+            defilement_animations
         )
 
-        VBox.setVgrow(defilement_images, Priority.ALWAYS)
-
-        val zone_contenu = StackPane()
-        zone_contenu.children.addAll(
-            liste_animations,
-            panneau_images
-        )
-
-        panneau_images.isVisible = false
-        panneau_images.isManaged = false
-
-        liste_animations.isVisible = true
-        liste_animations.isManaged = true
-
+        // Dialogue de création
         val dialogue = Dialog<Animation>()
 
-        dialogue.title = "Nouvelle animation"
+        dialogue.title = "Ajouter"
         dialogue.headerText = "Créer une nouvelle animation"
-        dialogue.contentText = "Nom de l'animation"
 
         val champ_nom = TextField()
         champ_nom.promptText = "Nom de l'animation"
-
+        val champ_largeur = TextField()
+        champ_largeur.promptText = "Largeur"
+        val champ_hauteur = TextField()
+        champ_hauteur.promptText = "hauteur"
         val champ_fps = TextField()
+        champ_fps.promptText = "FPS"
 
-        val contenu = GridPane()
+        val contenu = VBox()
+        contenu.spacing = 10.0
 
         val bouton_televerser = Button("Ajouter des images")
 
         val images_selectionnees = mutableListOf<String>()
 
-        contenu.hgap = 10.0
-        contenu.vgap = 10.0
-
-        contenu.add(Label("Nom :"), 0, 0)
-        contenu.add(champ_nom, 1, 0)
-
-        contenu.add(Label("FPS :"), 0, 1)
-        contenu.add(champ_fps, 1, 1)
-
-        contenu.add(bouton_televerser, 1, 2)
+        contenu.children.addAll(
+            champ_nom,
+            champ_largeur,
+            champ_hauteur,
+            champ_fps,
+            bouton_televerser
+        )
 
         dialogue.dialogPane.content = contenu
 
@@ -141,10 +119,45 @@ class PanneauAnimations(
             ButtonType.CANCEL
         )
 
-        val bouton_ajouter = Button("Ajouter une animation")
+        dialogue.setResultConverter { bouton ->
+            if (bouton == ButtonType.OK) {
+
+                val nom = champ_nom.text.trim()
+                val largeur = champ_largeur.text.toIntOrNull()
+                val hauteur = champ_hauteur.text.toIntOrNull()
+                val fps = champ_fps.text.toIntOrNull()
+
+                if (
+                    nom.isNotBlank() &&
+                    fps != null && fps in 1..60 &&
+                    largeur != null && largeur > 0 &&
+                    hauteur != null && hauteur > 0
+                    ) {
+                    Animation(
+                        id = 0,
+                        nom = nom,
+                        largeur = largeur,
+                        hauteur = hauteur,
+                        fps = fps,
+                        id_objet = this.id_objet
+                            ?: return@setResultConverter null
+                    )
+                } else {
+                    null
+                }
+
+            } else {
+                null
+            }
+        }
 
         bouton_ajouter.setOnAction {
             val objet_id = id_objet ?: return@setOnAction
+
+            // Réinitialiser les champs avant l'ouverture
+            champ_nom.clear()
+            champ_fps.clear()
+            images_selectionnees.clear()
 
             val resultat = dialogue.showAndWait()
 
@@ -153,33 +166,13 @@ class PanneauAnimations(
                 val animation = animation_service.creerAnimation(
                     objet_id,
                     animation_saisie.nom,
+                    animation_saisie.largeur,
+                    animation_saisie.hauteur,
                     animation_saisie.fps,
                     images_selectionnees
                 )
 
                 liste_animations.items.add(animation)
-            }
-        }
-
-        dialogue.setResultConverter { bouton ->
-            if (bouton == ButtonType.OK) {
-
-                val nom = champ_nom.text.trim()
-                val fps = champ_fps.text.toIntOrNull()
-
-                if (nom.isNotBlank() && fps != null && fps in 1..60) {
-                    Animation(
-                        id = 0,
-                        nom = nom,
-                        fps = fps,
-                        id_objet = this.id_objet ?: return@setResultConverter null
-                    )
-                } else {
-                    null
-                }
-
-            } else {
-                null
             }
         }
 
@@ -194,88 +187,35 @@ class PanneauAnimations(
                     "Images",
                     "*.jpg",
                     "*.png",
-                    "*jpeg"
+                    "*.jpeg"
                 )
             )
 
             val fichiers = selecteur.showOpenMultipleDialog(null)
 
             if (fichiers != null) {
+                images_selectionnees.clear()
                 images_selectionnees.addAll(
                     fichiers.map { it.absolutePath }
                 )
             }
         }
 
-        bouton_retour.setOnAction {
-            panneau_images.isVisible = false
-            panneau_images.isManaged = false
-
-            liste_animations.isVisible = true
-            liste_animations.isManaged = true
-
-            grille_images.isVisible = true
-            grille_images.isManaged = true
-
-            image_agrandie.isVisible = false
-            image_agrandie.isManaged = false
-        }
-
-        liste_animations.setOnMouseClicked { e ->
-
-            if (e.clickCount == 2) {
-
-                val animation = liste_animations.selectionModel.selectedItem
-
-                if (animation != null) {
-                    liste_animations.isVisible = false
-                    liste_animations.isManaged = false
-                    panneau_images.isVisible = true
-                    panneau_images.isManaged = true
-
-                    grille_images.children.clear()
-
-                    animation.images.forEach { chemin ->
-
-                        val image = Image(Path.of(chemin).toUri().toString())
-
-                        val miniature = ImageView(image)
-                        miniature.fitWidth = 120.0
-                        miniature.fitHeight = 120.0
-                        miniature.isPreserveRatio = true
-                        miniature.isSmooth = true
-
-                        miniature.setOnMouseClicked { m ->
-
-                            if (m.clickCount == 2) {
-                                image_agrandie.image = image
-
-                                image_agrandie.fitWidth = zone_image.width * 0.9
-                                image_agrandie.fitHeight = zone_image.height * 0.9
-
-                                grille_images.isVisible = false
-                                grille_images.isManaged = false
-
-                                image_agrandie.isVisible = true
-                                image_agrandie.isManaged = true
-                            }
-                        }
-
-                        grille_images.children.add(miniature)
-                    }
-                }
-            }
-        }
-
         panneau.children.addAll(
-            titre,
-            bouton_ajouter,
-            zone_contenu
+            entete,
+            defilement_animations
         )
 
-        VBox.setVgrow(zone_contenu, Priority.ALWAYS)
+        VBox.setVgrow(defilement_animations, Priority.ALWAYS)
 
         return panneau
+    }
+
+    init {
+        liste_animations.selectionModel.selectedItemProperty().addListener {
+                _, _, animation_selectionnee ->
+            action_selectionner_animation(animation_selectionnee)
+        }
     }
 }
 
@@ -287,9 +227,6 @@ class CelluleAnimation(
     private val image_crayon = ImageView(
         Image(javaClass.getResource("/images/crayon.png")!!.toExternalForm())
     )
-    private val image_dossier = ImageView(
-        Image(javaClass.getResource("/images/dossier-petit.png")!!.toExternalForm())
-    )
     private val supprimer = Button("x")
     private val ligne = HBox(10.0)
     private val champ_nom = TextField()
@@ -298,9 +235,6 @@ class CelluleAnimation(
 
         image_crayon.fitWidth = 21.0
         image_crayon.isPreserveRatio = true
-
-        image_dossier.fitWidth = 21.0
-        image_dossier.isPreserveRatio = true
 
         ligne.alignment = Pos.CENTER_LEFT
 
@@ -311,7 +245,6 @@ class CelluleAnimation(
             nom_animation,
             espace,
             image_crayon,
-            image_dossier,
             supprimer
         )
 
@@ -320,7 +253,11 @@ class CelluleAnimation(
             champ_nom.isVisible = true
 
             champ_nom.text = nom_animation.text
-            ligne.children.setAll(champ_nom, espace, image_crayon, image_dossier, supprimer)
+            ligne.children.setAll(champ_nom,
+                espace,
+                image_crayon,
+                supprimer
+            )
 
             champ_nom.requestFocus()
             champ_nom.selectAll()
@@ -333,7 +270,11 @@ class CelluleAnimation(
                 nom_animation.text = nouveau_nom
             }
 
-            ligne.children.setAll(nom_animation, espace, image_crayon, image_dossier, supprimer)
+            ligne.children.setAll(nom_animation,
+                espace,
+                image_crayon,
+                supprimer
+            )
 
             nom_animation.isVisible = true
             champ_nom.isVisible = false
@@ -373,5 +314,7 @@ class CelluleAnimation(
             graphic = ligne
         }
     }
+
+
 
 }

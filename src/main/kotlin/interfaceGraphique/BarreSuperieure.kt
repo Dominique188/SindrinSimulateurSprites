@@ -18,15 +18,15 @@ class BarreSuperieure(
         val menu_affichage = Menu("Affichage")
 
         // Option : dimensions par défaut
-        val item_dimensions_defaut = MenuItem(
-            "Remettre les dimensions des panneaux par défaut"
+        val zoom_100 = MenuItem(
+            "Zoom 100 %"
         )
 
-        item_dimensions_defaut.setOnAction {
+        zoom_100.setOnAction {
             action_dimensions_defaut()
         }
 
-        menu_affichage.items.add(item_dimensions_defaut)
+        menu_affichage.items.add(zoom_100)
 
         // Ajouter les menus à la barre supérieure
         menu_barre.menus.addAll(

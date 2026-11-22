@@ -5,7 +5,6 @@ import modele.Animation
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 
 class AnimationService {
 
@@ -16,6 +15,8 @@ class AnimationService {
     fun creerAnimation(
         id_objet: Int,
         nom: String,
+        largeur: Int,
+        hauteur: Int,
         fps: Int,
         images_selectionnees: List<String>
     ): Animation {
@@ -23,11 +24,13 @@ class AnimationService {
         val animation = Animation(
             id = prochain_id,
             nom = nom,
+            largeur = largeur,
+            hauteur = hauteur,
             fps = fps,
             id_objet = id_objet
         )
 
-        val dossier_images = Path.of("images", animation.id.toString())
+        val dossier_images = Path.of("assets/images", animation.id.toString())
         Files.createDirectories(dossier_images)
         println("Dossier créé : ${dossier_images.toAbsolutePath()}")
 
@@ -55,7 +58,7 @@ class AnimationService {
 
     fun supprimerAnimation(animation: Animation) {
 
-        val dossier_images = Path.of("images", animation.id.toString())
+        val dossier_images = Path.of("assets/images", animation.id.toString())
 
         if (Files.exists(dossier_images)) {
             // Parcourt le dossier et tous ses sous-dossiers
@@ -66,6 +69,59 @@ class AnimationService {
             }
         }
         animations.remove(animation)
+        animation_dao.enregistrer(prochain_id, animations)
+    }
+
+    fun supprimerImages(animation: Animation, chemins: List<String>) {
+        chemins.forEach { chemin ->
+            val fichier = Path.of(chemin)
+
+            // Supprimer le fichier s'il existe
+            Files.deleteIfExists(fichier)
+
+            // Retirer le chemin de l'animation
+            animation.images.remove(chemin)
+        }
+
+        // Enregistrer les modifications dans animations.json
+        animation_dao.enregistrer(prochain_id, animations)
+    }
+
+    fun ajouterImages(
+        animation: Animation,
+        images_selectionnees: List<String>
+    ) {
+
+        val dossier_images = Path.of(
+            "assets/images",
+            animation.id.toString()
+        )
+
+        Files.createDirectories(dossier_images)
+
+        var prochain_index = animation.images.size + 1
+
+        images_selectionnees.forEach { chemin ->
+
+            val fichier_source = Path.of(chemin)
+
+            val extension = fichier_source.fileName.toString()
+                .substringAfterLast(".", "")
+
+            val nom_fichier = "%03d.%s".format(
+                prochain_index,
+                extension
+            )
+
+            val destination = dossier_images.resolve(nom_fichier)
+
+            Files.copy(fichier_source, destination)
+
+            animation.images.add(destination.toString())
+
+            prochain_index++
+        }
+
         animation_dao.enregistrer(prochain_id, animations)
     }
 
